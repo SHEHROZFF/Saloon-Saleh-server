@@ -35,16 +35,8 @@ const transports = [
     new winston.transports.Console(),
 ];
 
-// In serverless environments like Vercel, the filesystem is read-only.
-if (config.env !== 'production' && !process.env.VERCEL) {
-    transports.push(
-        new winston.transports.File({
-            filename: 'logs/error.log',
-            level: 'error',
-        }),
-        new winston.transports.File({ filename: 'logs/all.log' })
-    );
-}
+// File logging completely disabled for Vercel/Serverless read-only environments
+// transports.push(new winston.transports.File({ filename: 'logs/error.log', ... }));
 
 const logger = winston.createLogger({
     level: level(),
