@@ -33,12 +33,18 @@ const format = winston.format.combine(
 
 const transports = [
     new winston.transports.Console(),
-    new winston.transports.File({
-        filename: 'logs/error.log',
-        level: 'error',
-    }),
-    new winston.transports.File({ filename: 'logs/all.log' }),
 ];
+
+// In serverless environments like Vercel, the filesystem is read-only.
+if (config.env !== 'production' && !process.env.VERCEL) {
+    transports.push(
+        new winston.transports.File({
+            filename: 'logs/error.log',
+            level: 'error',
+        }),
+        new winston.transports.File({ filename: 'logs/all.log' })
+    );
+}
 
 const logger = winston.createLogger({
     level: level(),

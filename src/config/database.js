@@ -10,6 +10,7 @@ const pool = new Pool({
     password: config.database.password,
     min: config.database.pool.min,
     max: config.database.pool.max,
+    ssl: config.env === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 pool.on('connect', () => {
