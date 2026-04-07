@@ -1,8 +1,9 @@
-const db = require('../../config/database');
-const logger = require('../../utils/logger');
+-- ============================================================
+-- SALOON SALEH — Complete Database Schema
+-- Run this in pgAdmin or psql against your saloon_saleh_db
+-- ============================================================
 
-// ─── Helper: auto-update updated_at on row change ───
-const createUpdatedAtFunction = `
+-- 0. Auto-update trigger function
 CREATE OR REPLACE FUNCTION trigger_set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -10,18 +11,10 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-`;
 
-const applyUpdatedAtTrigger = (tableName) => `
-DROP TRIGGER IF EXISTS set_updated_at ON ${tableName};
-CREATE TRIGGER set_updated_at
-  BEFORE UPDATE ON ${tableName}
-  FOR EACH ROW
-  EXECUTE FUNCTION trigger_set_updated_at();
-`;
-
-// ─── 1. Users ───
-const createUsersTable = `
+-- ============================================================
+-- 1. USERS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
@@ -40,10 +33,14 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_type ON users(user_type);
-`;
 
-// ─── 2. Product Categories ───
-const createProductCategoriesTable = `
+DROP TRIGGER IF EXISTS set_updated_at ON users;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+-- ============================================================
+-- 2. PRODUCT CATEGORIES
+-- ============================================================
 CREATE TABLE IF NOT EXISTS product_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) UNIQUE NOT NULL,
@@ -52,10 +49,10 @@ CREATE TABLE IF NOT EXISTS product_categories (
   sort_order INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-`;
 
-// ─── 3. Products ───
-const createProductsTable = `
+-- ============================================================
+-- 3. PRODUCTS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(255) NOT NULL,
@@ -77,20 +74,24 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
-`;
 
-// ─── 4. Service Categories ───
-const createServiceCategoriesTable = `
+DROP TRIGGER IF EXISTS set_updated_at ON products;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON products
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+-- ============================================================
+-- 4. SERVICE CATEGORIES
+-- ============================================================
 CREATE TABLE IF NOT EXISTS service_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) UNIQUE NOT NULL,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-`;
 
-// ─── 5. Services ───
-const createServicesTable = `
+-- ============================================================
+-- 5. SERVICES
+-- ============================================================
 CREATE TABLE IF NOT EXISTS services (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
@@ -107,13 +108,16 @@ CREATE TABLE IF NOT EXISTS services (
 
 CREATE INDEX IF NOT EXISTS idx_services_category ON services(category_id);
 CREATE INDEX IF NOT EXISTS idx_services_active ON services(is_active);
-`;
 
-// ─── 6. Staff ───
-const createStaffTable = `
+DROP TRIGGER IF EXISTS set_updated_at ON services;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON services
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+-- ============================================================
+-- 6. STAFF
+-- ============================================================
 CREATE TABLE IF NOT EXISTS staff (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID UNIQUE REFERENCES users(id) ON DELETE SET NULL,
   name VARCHAR(255) NOT NULL,
   role VARCHAR(100) NOT NULL,
   avatar_url TEXT,
@@ -125,11 +129,13 @@ CREATE TABLE IF NOT EXISTS staff (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_staff_user_id ON staff(user_id);
-`;
+DROP TRIGGER IF EXISTS set_updated_at ON staff;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON staff
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
-// ─── 7. Staff ↔ Services (many-to-many) ───
-const createStaffServicesTable = `
+-- ============================================================
+-- 7. STAFF ↔ SERVICES (junction)
+-- ============================================================
 CREATE TABLE IF NOT EXISTS staff_services (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
@@ -139,10 +145,10 @@ CREATE TABLE IF NOT EXISTS staff_services (
 
 CREATE INDEX IF NOT EXISTS idx_staff_services_staff ON staff_services(staff_id);
 CREATE INDEX IF NOT EXISTS idx_staff_services_service ON staff_services(service_id);
-`;
 
-// ─── 8. Time Slots ───
-const createTimeSlotsTable = `
+-- ============================================================
+-- 8. TIME SLOTS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS time_slots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slot_time TIME NOT NULL,
@@ -150,10 +156,10 @@ CREATE TABLE IF NOT EXISTS time_slots (
   is_active BOOLEAN DEFAULT true,
   sort_order INT DEFAULT 0
 );
-`;
 
-// ─── 9. Bookings ───
-const createBookingsTable = `
+-- ============================================================
+-- 9. BOOKINGS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -176,10 +182,14 @@ CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_staff ON bookings(staff_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(booking_date);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
-`;
 
-// ─── 10. Booking ↔ Services (many-to-many) ───
-const createBookingServicesTable = `
+DROP TRIGGER IF EXISTS set_updated_at ON bookings;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON bookings
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+-- ============================================================
+-- 10. BOOKING ↔ SERVICES (junction)
+-- ============================================================
 CREATE TABLE IF NOT EXISTS booking_services (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
@@ -188,10 +198,10 @@ CREATE TABLE IF NOT EXISTS booking_services (
 );
 
 CREATE INDEX IF NOT EXISTS idx_booking_services_booking ON booking_services(booking_id);
-`;
 
-// ─── 11. Coupons ───
-const createCouponsTable = `
+-- ============================================================
+-- 11. COUPONS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS coupons (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code VARCHAR(50) UNIQUE NOT NULL,
@@ -208,10 +218,14 @@ CREATE TABLE IF NOT EXISTS coupons (
 );
 
 CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
-`;
 
-// ─── 12. Orders ───
-const createOrdersTable = `
+DROP TRIGGER IF EXISTS set_updated_at ON coupons;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON coupons
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+-- ============================================================
+-- 12. ORDERS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_number VARCHAR(20) UNIQUE NOT NULL,
@@ -233,10 +247,14 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
-`;
 
-// ─── 13. Order Items ───
-const createOrderItemsTable = `
+DROP TRIGGER IF EXISTS set_updated_at ON orders;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+-- ============================================================
+-- 13. ORDER ITEMS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -249,10 +267,10 @@ CREATE TABLE IF NOT EXISTS order_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
-`;
 
-// ─── 14. Billing Addresses ───
-const createBillingAddressesTable = `
+-- ============================================================
+-- 14. BILLING ADDRESSES
+-- ============================================================
 CREATE TABLE IF NOT EXISTS billing_addresses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -267,10 +285,10 @@ CREATE TABLE IF NOT EXISTS billing_addresses (
   phone VARCHAR(20) NOT NULL,
   email VARCHAR(255) NOT NULL
 );
-`;
 
-// ─── 15. Shipping Addresses ───
-const createShippingAddressesTable = `
+-- ============================================================
+-- 15. SHIPPING ADDRESSES
+-- ============================================================
 CREATE TABLE IF NOT EXISTS shipping_addresses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -280,10 +298,10 @@ CREATE TABLE IF NOT EXISTS shipping_addresses (
   city VARCHAR(100) NOT NULL,
   postcode VARCHAR(20) NOT NULL
 );
-`;
 
-// ─── 16. Waitlist ───
-const createWaitlistTable = `
+-- ============================================================
+-- 16. WAITLIST
+-- ============================================================
 CREATE TABLE IF NOT EXISTS waitlist (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   full_name VARCHAR(255) NOT NULL,
@@ -294,68 +312,16 @@ CREATE TABLE IF NOT EXISTS waitlist (
 );
 
 CREATE INDEX IF NOT EXISTS idx_waitlist_status ON waitlist(status);
-`;
 
-// ─── 17. Site Settings ───
-const createSiteSettingsTable = `
+-- ============================================================
+-- 17. SITE SETTINGS
+-- ============================================================
 CREATE TABLE IF NOT EXISTS site_settings (
   key VARCHAR(100) PRIMARY KEY,
   value JSONB NOT NULL,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-`;
 
-// ─── Migration Runner ───
-const tablesInOrder = [
-  { name: 'updated_at function', sql: createUpdatedAtFunction },
-  { name: 'users', sql: createUsersTable },
-  { name: 'product_categories', sql: createProductCategoriesTable },
-  { name: 'products', sql: createProductsTable },
-  { name: 'service_categories', sql: createServiceCategoriesTable },
-  { name: 'services', sql: createServicesTable },
-  { name: 'staff', sql: createStaffTable },
-  { name: 'staff_services', sql: createStaffServicesTable },
-  { name: 'time_slots', sql: createTimeSlotsTable },
-  { name: 'bookings', sql: createBookingsTable },
-  { name: 'booking_services', sql: createBookingServicesTable },
-  { name: 'coupons', sql: createCouponsTable },
-  { name: 'orders', sql: createOrdersTable },
-  { name: 'order_items', sql: createOrderItemsTable },
-  { name: 'billing_addresses', sql: createBillingAddressesTable },
-  { name: 'shipping_addresses', sql: createShippingAddressesTable },
-  { name: 'waitlist', sql: createWaitlistTable },
-  { name: 'site_settings', sql: createSiteSettingsTable },
-];
-
-// Tables that should have updated_at triggers
-const tablesWithUpdatedAt = [
-  'users', 'products', 'services', 'staff', 'bookings', 'coupons', 'orders',
-];
-
-async function runMigrations() {
-  try {
-    logger.info('Starting database migrations...');
-
-    for (const table of tablesInOrder) {
-      await db.query(table.sql);
-      logger.info(`✓ ${table.name} created/verified`);
-    }
-
-    for (const tableName of tablesWithUpdatedAt) {
-      await db.query(applyUpdatedAtTrigger(tableName));
-      logger.info(`✓ updated_at trigger applied to ${tableName}`);
-    }
-
-    logger.info('All migrations completed successfully! ✨');
-    process.exit(0);
-  } catch (error) {
-    logger.error('Migration failed:', error);
-    process.exit(1);
-  }
-}
-
-if (require.main === module) {
-  runMigrations();
-}
-
-module.exports = { runMigrations };
+-- ============================================================
+-- ✅ DONE — All 17 tables created!
+-- ============================================================

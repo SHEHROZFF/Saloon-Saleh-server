@@ -8,7 +8,7 @@ const register = Joi.object({
     address: Joi.string().max(500),
     city: Joi.string().max(100),
     area: Joi.string().max(100),
-    userType: Joi.string().valid('needy', 'helper', 'verifier').default('needy'),
+    userType: Joi.string().valid('customer', 'admin', 'staff').default('customer'),
 });
 
 const login = Joi.object({
