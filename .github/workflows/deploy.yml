@@ -17,6 +17,11 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Create Restart Trigger
+      run: |
+        mkdir -p tmp
+        touch tmp/restart.txt
+
     - name: Sync files to Hostinger
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
