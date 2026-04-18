@@ -45,7 +45,7 @@ async function seed() {
     const products = [
       {
         title: 'Premium Beard Oil',
-        brand: 'Saloon Saleh',
+        brand: 'Salon Saleh',
         price: 45.0,
         image_url: 'https://images.unsplash.com/photo-1590156206659-9993ed6e9d69?q=80&w=1287&auto=format&fit=crop',
         category: 'Beard Care',
@@ -57,7 +57,7 @@ async function seed() {
       },
       {
         title: 'Matte Clay Wax',
-        brand: 'Saloon Saleh',
+        brand: 'Salon Saleh',
         price: 38.0,
         image_url: 'https://images.unsplash.com/photo-1592647420248-b730bf656201?q=80&w=1287&auto=format&fit=crop',
         category: 'Hair Styling',
@@ -69,7 +69,7 @@ async function seed() {
       },
       {
         title: 'Revitalizing Face Wash',
-        brand: 'Saloon Saleh',
+        brand: 'Salon Saleh',
         price: 32.0,
         image_url: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=1287&auto=format&fit=crop',
         category: 'Skin Care',
@@ -81,7 +81,7 @@ async function seed() {
       },
       {
         title: 'Classic Shave Cream',
-        brand: 'Saloon Saleh',
+        brand: 'Salon Saleh',
         price: 28.0,
         image_url: 'https://images.unsplash.com/photo-1626285861696-9f0bf5a49c6a?q=80&w=1332&auto=format&fit=crop',
         category: 'Shaving',
@@ -93,7 +93,7 @@ async function seed() {
       },
       {
         title: 'Sea Salt Spray',
-        brand: 'Saloon Saleh',
+        brand: 'Salon Saleh',
         price: 35.0,
         image_url: 'https://images.unsplash.com/photo-1552046122-03184de85e08?q=80&w=1287&auto=format&fit=crop',
         category: 'Hair Styling',

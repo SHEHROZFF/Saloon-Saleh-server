@@ -5,7 +5,7 @@ const db = require('../config/database');
 // ─── Categories ───
 
 const getCategories = catchAsync(async (req, res) => {
-  const result = await db.query('SELECT * FROM service_categories ORDER BY sort_order ASC');
+  const result = await db.query('SELECT * FROM service_categories WHERE is_deleted = false ORDER BY sort_order ASC');
 
   res.status(200).json({
     status: 'success',
@@ -37,7 +37,7 @@ const getAllServices = catchAsync(async (req, res) => {
   let query = `SELECT s.*, sc.name AS category_name
     FROM services s
     LEFT JOIN service_categories sc ON s.category_id = sc.id
-    WHERE s.is_active = true`;
+    WHERE s.is_active = true AND s.is_deleted = false`;
 
   const values = [];
   let paramIndex = 1;
@@ -70,7 +70,7 @@ const getService = catchAsync(async (req, res, next) => {
     `SELECT s.*, sc.name AS category_name
      FROM services s
      LEFT JOIN service_categories sc ON s.category_id = sc.id
-     WHERE s.id = $1`,
+     WHERE s.id = $1 AND s.is_deleted = false`,
     [req.params.id]
   );
 
@@ -129,7 +129,7 @@ const updateService = catchAsync(async (req, res, next) => {
 });
 
 const deleteService = catchAsync(async (req, res, next) => {
-  const result = await db.query('DELETE FROM services WHERE id = $1 RETURNING id', [req.params.id]);
+  const result = await db.query('UPDATE services SET is_deleted = true, is_active = false WHERE id = $1 RETURNING id', [req.params.id]);
 
   if (!result.rows[0]) {
     return next(new AppError('Service not found', 404));

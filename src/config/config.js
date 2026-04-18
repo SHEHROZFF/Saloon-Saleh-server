@@ -40,4 +40,17 @@ module.exports = {
     api: {
         prefix: process.env.API_PREFIX || '/api/v1',
     },
+
+    email: {
+        smtp: {
+            host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
+            port: parseInt(process.env.SMTP_PORT, 10) || 2525,
+            auth: {
+                user: process.env.SMTP_USER || 'your_user',
+                pass: process.env.SMTP_PASS || 'your_pass',
+            },
+        },
+        from: process.env.EMAIL_FROM || 'noreply@saloonsaleh.com',
+        frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    },
 };

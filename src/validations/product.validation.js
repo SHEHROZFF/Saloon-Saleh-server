@@ -2,7 +2,7 @@ const Joi = require('joi');
 
 const create = Joi.object({
   title: Joi.string().min(2).max(255).required(),
-  brand: Joi.string().max(100).default('Saloon Saleh'),
+  brand: Joi.string().max(100).default('Salon Saleh'),
   price: Joi.number().positive().precision(2).required(),
   image_url: Joi.string().uri().allow('', null),
   category_id: Joi.string().uuid().allow(null),

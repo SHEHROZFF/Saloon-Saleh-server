@@ -10,6 +10,8 @@ const couponRoutes = require('./coupon.routes');
 const waitlistRoutes = require('./waitlist.routes');
 const adminRoutes = require('./admin.routes');
 const settingsRoutes = require('./settings.routes');
+const reportRoutes = require('./report.routes');
+const blogRoutes = require('./blog.routes');
 
 const router = express.Router();
 
@@ -17,7 +19,7 @@ const router = express.Router();
 router.get('/', (req, res) => {
   res.status(200).json({
     status: 'success',
-    message: 'Saloon Saleh API',
+    message: 'Salon Saleh API',
     version: '1.0.0',
     endpoints: {
       auth: '/auth',
@@ -31,6 +33,8 @@ router.get('/', (req, res) => {
       waitlist: '/waitlist',
       admin: '/admin',
       settings: '/settings',
+      reports: '/reports',
+      blogs: '/blogs',
     },
   });
 });
@@ -47,5 +51,7 @@ router.use('/coupons', couponRoutes);
 router.use('/waitlist', waitlistRoutes);
 router.use('/admin', adminRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/reports', reportRoutes);
+router.use('/blogs', blogRoutes);
 
 module.exports = router;

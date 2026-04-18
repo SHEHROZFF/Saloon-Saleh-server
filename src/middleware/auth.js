@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
+const db = require('../config/database');
 
 const protect = catchAsync(async (req, res, next) => {
     // 1) Get token from header
@@ -15,10 +16,23 @@ const protect = catchAsync(async (req, res, next) => {
     }
 
     // 2) Verify token
-    const decoded = jwt.verify(token, config.jwt.secret);
+    let decoded;
+    try {
+        decoded = jwt.verify(token, config.jwt.secret);
+    } catch (err) {
+        return next(new AppError('Invalid token. Please log in again.', 401));
+    }
 
-    // 3) Attach user to request (you would typically fetch user from DB here)
+    // 3) Attach user to request
     req.user = decoded;
+
+    // 4) If staff, attach staff_id
+    if (decoded.role === 'staff' || decoded.role === 'admin') {
+        const staffResult = await db.query('SELECT id FROM staff WHERE user_id = $1 AND is_deleted = false', [decoded.id]);
+        if (staffResult.rows[0]) {
+            req.staff_id = staffResult.rows[0].id;
+        }
+    }
 
     next();
 });

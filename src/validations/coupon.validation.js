@@ -16,4 +16,9 @@ const validate = Joi.object({
   order_total: Joi.number().positive().required(),
 });
 
-module.exports = { create, validate };
+const distribute = Joi.object({
+  coupon_id: Joi.string().uuid().required(),
+  emails: Joi.array().items(Joi.string().email()).min(1).required(),
+});
+
+module.exports = { create, validate, distribute };

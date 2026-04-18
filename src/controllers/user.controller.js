@@ -3,7 +3,7 @@ const AppError = require('../utils/AppError');
 const db = require('../config/database');
 
 const getAllUsers = catchAsync(async (req, res, next) => {
-    const result = await db.query('SELECT id, name, email, phone, city, area, user_type, created_at FROM users');
+    const result = await db.query('SELECT id, name, email, phone, city, area, user_type, created_at FROM users WHERE is_deleted = false');
     const users = result.rows;
 
     res.status(200).json({
@@ -14,7 +14,7 @@ const getAllUsers = catchAsync(async (req, res, next) => {
 });
 
 const getUser = catchAsync(async (req, res, next) => {
-    const result = await db.query('SELECT id, name, email, phone, city, area, user_type, created_at FROM users WHERE id = $1', [req.params.id]);
+    const result = await db.query('SELECT id, name, email, phone, city, area, user_type, created_at FROM users WHERE id = $1 AND is_deleted = false', [req.params.id]);
     const user = result.rows[0];
 
     if (!user) {
@@ -88,7 +88,16 @@ const updateUser = catchAsync(async (req, res, next) => {
 });
 
 const deleteUser = catchAsync(async (req, res, next) => {
-    const result = await db.query('DELETE FROM users WHERE id = $1 RETURNING id', [req.params.id]);
+    // Check if user is staff
+    const user = await db.query('SELECT user_type FROM users WHERE id = $1', [req.params.id]);
+    if (user.rows[0]?.user_type === 'staff') {
+        await db.query('UPDATE staff SET is_deleted = true, is_active = false WHERE user_id = $1', [req.params.id]);
+    }
+
+    const result = await db.query(
+        'UPDATE users SET is_deleted = true, is_active = false WHERE id = $1 RETURNING id',
+        [req.params.id]
+    );
 
     if (!result.rows[0]) {
         return next(new AppError('User not found', 404));

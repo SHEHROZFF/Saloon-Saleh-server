@@ -16,5 +16,6 @@ router.get('/my', protect, orderController.getMyOrders);
 router.get('/', protect, restrictTo('admin'), orderController.getAllOrders);
 router.get('/:id', protect, restrictTo('admin'), orderController.getOrder);
 router.patch('/:id/status', protect, restrictTo('admin'), validate(orderValidation.updateStatus), orderController.updateOrderStatus);
+router.patch('/:id', protect, restrictTo('admin'), orderController.updateOrderDetails);
 
 module.exports = router;

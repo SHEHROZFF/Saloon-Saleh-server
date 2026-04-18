@@ -2,6 +2,7 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/AppError');
 const db = require('../config/database');
 const { parsePagination, buildPaginationMeta } = require('../utils/queryHelpers');
+const emailService = require('../utils/email');
 
 // ─── Create Booking (from 6-step wizard) ───
 
@@ -21,7 +22,7 @@ const createBooking = catchAsync(async (req, res) => {
       const conflict = await client.query(
         `SELECT id FROM bookings
          WHERE staff_id = $1 AND booking_date = $2 AND time_slot_id = $3
-         AND status NOT IN ('cancelled', 'no_show')`,
+         AND status NOT IN ('cancelled', 'no_show') AND is_deleted = false`,
         [staff_id, booking_date, time_slot_id]
       );
 
@@ -89,6 +90,11 @@ const createBooking = catchAsync(async (req, res) => {
       status: 'success',
       data: { booking: fullBooking.rows[0] },
     });
+
+    // Send Booking Confirmation Email asynchronously
+    if (fullBooking.rows[0].email) {
+      emailService.sendBookingConfirmation(fullBooking.rows[0].email, fullBooking.rows[0]);
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -223,6 +229,11 @@ const updateBookingStatus = catchAsync(async (req, res, next) => {
     status: 'success',
     data: { booking: result.rows[0] },
   });
+
+  // Send Status Update Email asynchronously
+  if (result.rows[0].email) {
+    emailService.sendBookingStatusUpdate(result.rows[0].email, result.rows[0], status);
+  }
 });
 
 // ─── Check Availability ───
@@ -239,7 +250,7 @@ const checkAvailability = catchAsync(async (req, res) => {
 
   // Get all active time slots
   const allSlots = await db.query(
-    'SELECT * FROM time_slots WHERE is_active = true ORDER BY sort_order ASC'
+    'SELECT * FROM time_slots WHERE is_active = true AND is_deleted = false ORDER BY sort_order ASC'
   );
 
   // Get booked slots for the given date (and optionally staff)
@@ -271,7 +282,7 @@ const checkAvailability = catchAsync(async (req, res) => {
 
 const getTimeSlots = catchAsync(async (req, res) => {
   const result = await db.query(
-    'SELECT * FROM time_slots WHERE is_active = true ORDER BY sort_order ASC'
+    'SELECT * FROM time_slots WHERE is_active = true AND is_deleted = false ORDER BY sort_order ASC'
   );
 
   res.status(200).json({
@@ -356,6 +367,11 @@ const updateStaffBookingStatus = catchAsync(async (req, res, next) => {
     status: 'success',
     data: { booking: result.rows[0] },
   });
+
+  // Send Status Update Email asynchronously
+  if (result.rows[0].email) {
+    emailService.sendBookingStatusUpdate(result.rows[0].email, result.rows[0], status);
+  }
 });
 
 const deleteBooking = catchAsync(async (req, res, next) => {
@@ -476,6 +492,11 @@ const updateBookingDetails = catchAsync(async (req, res, next) => {
       status: 'success',
       data: { booking: fullBooking.rows[0] },
     });
+
+    // Send Rescheduled/Modified Email asynchronously
+    if (fullBooking.rows[0].email) {
+      emailService.sendBookingDetailsModifiedEmail(fullBooking.rows[0].email, fullBooking.rows[0]);
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

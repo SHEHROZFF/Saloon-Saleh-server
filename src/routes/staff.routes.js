@@ -6,11 +6,16 @@ const staffValidation = require('../validations/staff.validation');
 
 const router = express.Router();
 
+// ─── Staff & Admin (Self) ───
+// These must come BEFORE :id to avoid "me" being treated as a UUID
+router.get('/me', protect, staffController.getMyStaffProfile);
+router.patch('/me', protect, staffController.updateMyStaffProfile);
+
 // ─── Public ───
 router.get('/', staffController.getAllStaff);
 router.get('/:id', staffController.getStaffMember);
 
-// ─── Admin Only ───
+// ─── Admin Only (Management) ───
 router.use(protect, restrictTo('admin'));
 router.post('/', validate(staffValidation.create), staffController.createStaff);
 router.put('/:id', validate(staffValidation.update), staffController.updateStaff);

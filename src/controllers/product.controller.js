@@ -6,7 +6,7 @@ const { buildPaginatedQuery, parsePagination, buildPaginationMeta } = require('.
 // ─── Categories ───
 
 const getCategories = catchAsync(async (req, res) => {
-  const result = await db.query('SELECT * FROM product_categories ORDER BY sort_order ASC');
+  const result = await db.query('SELECT * FROM product_categories WHERE is_deleted = false ORDER BY sort_order ASC');
 
   res.status(200).json({
     status: 'success',
@@ -54,6 +54,7 @@ const getAllProducts = catchAsync(async (req, res) => {
 
   // Always filter for active only on public-facing
   filters['p.is_active'] = true;
+  filters['p.is_deleted'] = false;
 
   const baseQuery = `SELECT p.*, pc.name AS category_name
     FROM products p
@@ -88,7 +89,7 @@ const getProduct = catchAsync(async (req, res, next) => {
     `SELECT p.*, pc.name AS category_name
      FROM products p
      LEFT JOIN product_categories pc ON p.category_id = pc.id
-     WHERE p.id = $1`,
+     WHERE p.id = $1 AND p.is_deleted = false`,
     [req.params.id]
   );
 
@@ -160,7 +161,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
 });
 
 const deleteProduct = catchAsync(async (req, res, next) => {
-  const result = await db.query('DELETE FROM products WHERE id = $1 RETURNING id', [req.params.id]);
+  const result = await db.query('UPDATE products SET is_deleted = true, is_active = false WHERE id = $1 RETURNING id', [req.params.id]);
 
   if (!result.rows[0]) {
     return next(new AppError('Product not found', 404));
@@ -171,7 +172,7 @@ const deleteProduct = catchAsync(async (req, res, next) => {
 
 const getBrands = catchAsync(async (req, res) => {
   const result = await db.query(
-    `SELECT DISTINCT brand FROM products WHERE is_active = true ORDER BY brand ASC`
+    `SELECT DISTINCT brand FROM products WHERE is_active = true AND is_deleted = false ORDER BY brand ASC`
   );
 
   res.status(200).json({

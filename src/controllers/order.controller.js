@@ -2,6 +2,7 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/AppError');
 const db = require('../config/database');
 const { parsePagination, buildPaginationMeta, generateOrderNumber } = require('../utils/queryHelpers');
+const emailService = require('../utils/email');
 
 // ─── Place Order ───
 
@@ -25,7 +26,7 @@ const createOrder = catchAsync(async (req, res) => {
     if (coupon_code) {
       const couponResult = await client.query(
         `SELECT * FROM coupons
-         WHERE code = $1 AND is_active = true
+         WHERE code = $1 AND is_active = true AND is_deleted = false
          AND (valid_until IS NULL OR valid_until > NOW())
          AND (usage_limit IS NULL OR times_used < usage_limit)`,
         [coupon_code.toUpperCase()]
@@ -109,6 +110,11 @@ const createOrder = catchAsync(async (req, res) => {
         },
       },
     });
+
+    // Send Order Confirmation Email asynchronously
+    if (billing_address && billing_address.email) {
+      emailService.sendOrderConfirmation(billing_address.email, order);
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -124,26 +130,30 @@ const getAllOrders = catchAsync(async (req, res) => {
   const { order_status, payment_status } = req.query;
   const offset = (page - 1) * limit;
 
-  let query = 'SELECT * FROM orders';
-  let countQuery = 'SELECT COUNT(*) FROM orders';
+  let query = `
+    SELECT o.*, ba.first_name, ba.last_name, ba.email as customer_email
+    FROM orders o
+    LEFT JOIN billing_addresses ba ON o.id = ba.order_id
+  `;
+  let countQuery = 'SELECT COUNT(*) FROM orders o';
 
   const conditions = [];
   const values = [];
   let paramIndex = 1;
 
   if (order_status) {
-    conditions.push(`order_status = $${paramIndex}`);
+    conditions.push(`o.order_status = $${paramIndex}`);
     values.push(order_status);
     paramIndex++;
   }
   if (payment_status) {
-    conditions.push(`payment_status = $${paramIndex}`);
+    conditions.push(`o.payment_status = $${paramIndex}`);
     values.push(payment_status);
     paramIndex++;
   }
 
   const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
-  query += `${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+  query += `${whereClause} ORDER BY o.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
   countQuery += whereClause;
 
   const [dataResult, countResult] = await Promise.all([
@@ -226,6 +236,97 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     status: 'success',
     data: { order: result.rows[0] },
   });
+
+  // Fetch the email for this order to send the notification
+  const billingResult = await db.query('SELECT email FROM billing_addresses WHERE order_id = $1', [req.params.id]);
+  const email = billingResult.rows[0]?.email;
+
+  if (email) {
+    if (order_status) {
+      emailService.sendOrderStatusUpdate(email, result.rows[0], order_status);
+    }
+    if (payment_status) {
+      emailService.sendPaymentStatusUpdate(email, result.rows[0], payment_status);
+    }
+  }
+});
+
+const updateOrderDetails = catchAsync(async (req, res, next) => {
+  const { billing_address, shipping_address, order_notes } = req.body;
+  const { id } = req.params;
+
+  const client = await db.getClient();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Update order notes
+    if (order_notes !== undefined) {
+      await client.query('UPDATE orders SET order_notes = $1 WHERE id = $2', [order_notes, id]);
+    }
+
+    // 2. Update billing address
+    if (billing_address) {
+      await client.query(
+        `UPDATE billing_addresses SET
+          first_name = COALESCE($1, first_name),
+          last_name = COALESCE($2, last_name),
+          phone = COALESCE($3, phone),
+          email = COALESCE($4, email),
+          street_address = COALESCE($5, street_address),
+          apartment = COALESCE($6, apartment),
+          city = COALESCE($7, city),
+          postcode = COALESCE($8, postcode),
+          country = COALESCE($9, country)
+        WHERE order_id = $10`,
+        [
+          billing_address.first_name, billing_address.last_name, 
+          billing_address.phone, billing_address.email,
+          billing_address.street_address, billing_address.apartment,
+          billing_address.city, billing_address.postcode, 
+          billing_address.country, id
+        ]
+      );
+    }
+
+    // 3. Update shipping address
+    if (shipping_address) {
+      const check = await client.query('SELECT id FROM shipping_addresses WHERE order_id = $1', [id]);
+      if (check.rows.length > 0) {
+        await client.query(
+          `UPDATE shipping_addresses SET
+            first_name = COALESCE($1, first_name),
+            last_name = COALESCE($2, last_name),
+            street_address = COALESCE($3, street_address),
+            city = COALESCE($4, city),
+            postcode = COALESCE($5, postcode)
+          WHERE order_id = $6`,
+          [
+            shipping_address.first_name, shipping_address.last_name,
+            shipping_address.street_address, shipping_address.city,
+            shipping_address.postcode, id
+          ]
+        );
+      } else {
+        await client.query(
+          `INSERT INTO shipping_addresses (order_id, first_name, last_name, street_address, city, postcode)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [id, shipping_address.first_name, shipping_address.last_name, shipping_address.street_address, shipping_address.city, shipping_address.postcode]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Order details updated successfully'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 });
 
 module.exports = {
@@ -234,4 +335,5 @@ module.exports = {
   getMyOrders,
   getOrder,
   updateOrderStatus,
+  updateOrderDetails,
 };

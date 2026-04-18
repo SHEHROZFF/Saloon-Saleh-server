@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url TEXT,
   user_type VARCHAR(20) CHECK (user_type IN ('customer', 'admin', 'staff')) NOT NULL DEFAULT 'customer',
   is_active BOOLEAN DEFAULT true,
+  is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS product_categories (
   slug VARCHAR(100) UNIQUE NOT NULL,
   image_url VARCHAR(1000),
   sort_order INT DEFAULT 0,
+  is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -56,7 +58,7 @@ CREATE TABLE IF NOT EXISTS product_categories (
 CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(255) NOT NULL,
-  brand VARCHAR(100) NOT NULL DEFAULT 'Saloon Saleh',
+  brand VARCHAR(100) NOT NULL DEFAULT 'Salon Saleh',
   price DECIMAL(10, 2) NOT NULL,
   image_url TEXT,
   category_id UUID REFERENCES product_categories(id) ON DELETE SET NULL,
@@ -66,6 +68,7 @@ CREATE TABLE IF NOT EXISTS products (
   benefits JSONB DEFAULT '[]',
   is_active BOOLEAN DEFAULT true,
   is_featured BOOLEAN DEFAULT false,
+  is_deleted BOOLEAN DEFAULT false,
   stock_quantity INT DEFAULT 0,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -86,6 +89,7 @@ CREATE TABLE IF NOT EXISTS service_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) UNIQUE NOT NULL,
   sort_order INT DEFAULT 0,
+  is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -101,6 +105,7 @@ CREATE TABLE IF NOT EXISTS services (
   description TEXT,
   gender_target VARCHAR(10) CHECK (gender_target IN ('Men', 'Women', 'Kids', 'All')) DEFAULT 'All',
   is_active BOOLEAN DEFAULT true,
+  is_deleted BOOLEAN DEFAULT false,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -124,6 +129,7 @@ CREATE TABLE IF NOT EXISTS staff (
   phone VARCHAR(20),
   email VARCHAR(255),
   is_active BOOLEAN DEFAULT true,
+  is_deleted BOOLEAN DEFAULT false,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -154,6 +160,7 @@ CREATE TABLE IF NOT EXISTS time_slots (
   slot_time TIME NOT NULL,
   display_label VARCHAR(20) NOT NULL,
   is_active BOOLEAN DEFAULT true,
+  is_deleted BOOLEAN DEFAULT false,
   sort_order INT DEFAULT 0
 );
 
@@ -174,6 +181,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   notes TEXT,
   total_price DECIMAL(10, 2) DEFAULT 0,
   status VARCHAR(20) CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled', 'no_show')) DEFAULT 'pending',
+  is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -213,6 +221,7 @@ CREATE TABLE IF NOT EXISTS coupons (
   valid_from TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   valid_until TIMESTAMP,
   is_active BOOLEAN DEFAULT true,
+  is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -238,6 +247,7 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method VARCHAR(20) CHECK (payment_method IN ('cod', 'card', 'transfer')) DEFAULT 'cod',
   payment_status VARCHAR(20) CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded')) DEFAULT 'pending',
   order_status VARCHAR(20) CHECK (order_status IN ('awaiting', 'processing', 'shipped', 'delivered', 'cancelled')) DEFAULT 'awaiting',
+  is_deleted BOOLEAN DEFAULT false,
   order_notes TEXT,
   coupon_code VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -306,8 +316,10 @@ CREATE TABLE IF NOT EXISTS waitlist (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   full_name VARCHAR(255) NOT NULL,
   phone VARCHAR(20) NOT NULL,
+  email VARCHAR(255) NOT NULL,
   desired_service VARCHAR(255),
   status VARCHAR(20) CHECK (status IN ('pending', 'contacted', 'booked')) DEFAULT 'pending',
+  is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

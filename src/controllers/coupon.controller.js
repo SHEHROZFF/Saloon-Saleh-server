@@ -2,6 +2,7 @@ const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/AppError');
 const db = require('../config/database');
 const { parsePagination, buildPaginationMeta } = require('../utils/queryHelpers');
+const emailService = require('../utils/email');
 
 // ─── Validate Coupon (Public) ───
 
@@ -10,7 +11,7 @@ const validateCoupon = catchAsync(async (req, res) => {
 
   const result = await db.query(
     `SELECT * FROM coupons
-     WHERE code = $1 AND is_active = true
+     WHERE code = $1 AND is_active = true AND is_deleted = false
      AND (valid_until IS NULL OR valid_until > NOW())
      AND (usage_limit IS NULL OR times_used < usage_limit)`,
     [code.toUpperCase()]
@@ -80,8 +81,8 @@ const getAllCoupons = catchAsync(async (req, res) => {
   const offset = (page - 1) * limit;
 
   const [dataResult, countResult] = await Promise.all([
-    db.query('SELECT * FROM coupons ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]),
-    db.query('SELECT COUNT(*) FROM coupons'),
+    db.query('SELECT * FROM coupons WHERE is_deleted = false ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]),
+    db.query('SELECT COUNT(*) FROM coupons WHERE is_deleted = false'),
   ]);
 
   res.status(200).json({
@@ -94,7 +95,7 @@ const getAllCoupons = catchAsync(async (req, res) => {
 // ─── Delete Coupon (Admin) ───
 
 const deleteCoupon = catchAsync(async (req, res, next) => {
-  const result = await db.query('DELETE FROM coupons WHERE id = $1 RETURNING id', [req.params.id]);
+  const result = await db.query('UPDATE coupons SET is_deleted = true, is_active = false WHERE id = $1 RETURNING id', [req.params.id]);
 
   if (!result.rows[0]) {
     return next(new AppError('Coupon not found', 404));
@@ -103,9 +104,37 @@ const deleteCoupon = catchAsync(async (req, res, next) => {
   res.status(204).json({ status: 'success', data: null });
 });
 
+// ─── Distribute Coupon (Admin) ───
+
+const distributeCoupon = catchAsync(async (req, res, next) => {
+  const { coupon_id, emails } = req.body;
+
+  const result = await db.query('SELECT * FROM coupons WHERE id = $1', [coupon_id]);
+  const coupon = result.rows[0];
+
+  if (!coupon) {
+    return next(new AppError('Coupon not found', 404));
+  }
+
+  const discountText = coupon.discount_type === 'percentage' 
+    ? `${coupon.discount_value}%` 
+    : `$${coupon.discount_value}`;
+
+  // Send emails asynchronously
+  emails.forEach(email => {
+    emailService.sendCouponDistributionEmail(email, 'Customer', coupon.code, discountText);
+  });
+
+  res.status(200).json({
+    status: 'success',
+    message: `Coupon successfully distributed to ${emails.length} recipients.`,
+  });
+});
+
 module.exports = {
   validateCoupon,
   createCoupon,
   getAllCoupons,
   deleteCoupon,
+  distributeCoupon,
 };

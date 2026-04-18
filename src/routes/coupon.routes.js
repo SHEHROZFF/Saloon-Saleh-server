@@ -12,6 +12,7 @@ router.post('/validate', validate(couponValidation.validate), couponController.v
 // ─── Admin Only ───
 router.use(protect, restrictTo('admin'));
 router.post('/', validate(couponValidation.create), couponController.createCoupon);
+router.post('/distribute', validate(couponValidation.distribute), couponController.distributeCoupon);
 router.get('/', couponController.getAllCoupons);
 router.delete('/:id', couponController.deleteCoupon);
 
