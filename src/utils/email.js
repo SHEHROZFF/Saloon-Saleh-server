@@ -3,13 +3,18 @@ const config = require('../config/config');
 const logger = require('./logger');
 
 // Create reusable transporter object using the default SMTP transport
+// Helper to strip quotes and extra spaces that Hostinger might inject
+const clean = (val) => (typeof val === 'string' ? val.replace(/['"]+/g, '').trim() : val);
+
 const transporter = nodemailer.createTransport({
-  host: config.email.smtp.host,
-  port: config.email.smtp.port,
+  host: clean(config.email.smtp.host),
+  // Ensure port is treated as a number
+  port: parseInt(clean(config.email.smtp.port), 10) || 465,
+  secure: true, // Titan and Hostinger Shared usually require Port 465 + Secure
   auth: {
-    user: config.email.smtp.auth.user,
-    pass: config.email.smtp.auth.pass,
-  },
+    user: clean(config.email.smtp.auth.user),
+    pass: clean(config.email.smtp.auth.pass),
+  }
 });
 
 /**
