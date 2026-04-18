@@ -13,6 +13,9 @@ const apiRoutes = require('./routes');
 
 const app = express();
 
+// Trust proxy for Hostinger
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
