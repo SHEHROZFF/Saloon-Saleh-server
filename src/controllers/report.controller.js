@@ -92,6 +92,7 @@ const getStaffReport = catchAsync(async (req, res) => {
 
   const staffPerformance = await db.query(
     `SELECT 
+        s.id,
         s.name,
         s.role,
         COUNT(b.id) as total_bookings,
@@ -114,7 +115,79 @@ const getStaffReport = catchAsync(async (req, res) => {
   });
 });
 
+const getStaffDetailReport = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { timeframe = '30d' } = req.query;
+  
+  let days = 30;
+  if (timeframe === '7d') days = 7;
+  if (timeframe === '90d') days = 90;
+  if (timeframe === '12m') days = 365;
+
+  // 1. Staff Summary
+  const staffSummary = await db.query(
+    `SELECT 
+        s.id, s.name, s.role, s.email, s.phone, s.avatar_url,
+        COUNT(b.id) as total_bookings,
+        SUM(b.total_price) FILTER (WHERE b.status = 'completed' OR b.status = 'confirmed') as revenue,
+        COUNT(b.id) FILTER (WHERE b.status = 'cancelled') as cancellations,
+        COUNT(b.id) FILTER (WHERE b.status = 'no_show') as no_shows,
+        AVG(b.total_price) FILTER (WHERE b.status = 'completed') as avg_booking_value
+     FROM staff s
+     LEFT JOIN bookings b ON s.id = b.staff_id
+     WHERE s.id = $1 AND (b.created_at IS NULL OR b.created_at >= NOW() - interval '1 day' * $2)
+     GROUP BY s.id`,
+    [id, days]
+  );
+
+  if (staffSummary.rows.length === 0) {
+    return res.status(404).json({ status: 'fail', message: 'Staff not found' });
+  }
+
+  // 2. Recent Bookings
+  const recentBookings = await db.query(
+    `SELECT 
+        b.id, b.first_name, b.last_name, b.booking_date, b.total_price, b.status,
+        ts.display_label as time_label,
+        string_agg(s.name, ', ') as services
+     FROM bookings b
+     JOIN time_slots ts ON b.time_slot_id = ts.id
+     LEFT JOIN booking_services bs ON b.id = bs.booking_id
+     LEFT JOIN services s ON bs.service_id = s.id
+     WHERE b.staff_id = $1 AND b.created_at >= NOW() - interval '1 day' * $2
+     GROUP BY b.id, ts.display_label, ts.slot_time
+     ORDER BY b.booking_date DESC, ts.slot_time DESC
+     LIMIT 50`,
+    [id, days]
+  );
+
+  // 3. Service Popularity for this staff
+  const serviceStats = await db.query(
+    `SELECT 
+        s.name, 
+        COUNT(bs.id) as count,
+        SUM(bs.price_at_booking) as revenue
+     FROM booking_services bs
+     JOIN services s ON bs.service_id = s.id
+     JOIN bookings b ON bs.booking_id = b.id
+     WHERE b.staff_id = $1 AND b.created_at >= NOW() - interval '1 day' * $2
+     GROUP BY s.id, s.name
+     ORDER BY count DESC`,
+    [id, days]
+  );
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      summary: staffSummary.rows[0],
+      bookings: recentBookings.rows,
+      services: serviceStats.rows
+    }
+  });
+});
+
 module.exports = {
   getBusinessReport,
-  getStaffReport
+  getStaffReport,
+  getStaffDetailReport
 };

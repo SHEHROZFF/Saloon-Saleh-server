@@ -9,5 +9,6 @@ router.use(protect, restrictTo('admin'));
 
 router.get('/business', reportController.getBusinessReport);
 router.get('/staff', reportController.getStaffReport);
+router.get('/staff/:id', reportController.getStaffDetailReport);
 
 module.exports = router;
