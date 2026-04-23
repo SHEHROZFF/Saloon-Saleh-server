@@ -1,6 +1,8 @@
 const express = require('express');
 const blogController = require('../controllers/blog.controller');
 const { protect, restrictTo } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const blogValidation = require('../validations/blog.validation');
 
 const router = express.Router();
 
@@ -13,8 +15,8 @@ router.get('/staff/:staffId', blogController.getStaffBlogs);
 router.use(protect);
 router.use(restrictTo('admin', 'staff'));
 
-router.post('/', blogController.createBlog);
-router.patch('/:id', blogController.updateBlog);
+router.post('/', validate(blogValidation.create), blogController.createBlog);
+router.patch('/:id', validate(blogValidation.update), blogController.updateBlog);
 router.delete('/:id', blogController.deleteBlog);
 
 module.exports = router;

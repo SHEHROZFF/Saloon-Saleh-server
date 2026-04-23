@@ -25,6 +25,10 @@ const getAllStaff = catchAsync(async (req, res) => {
     conditions.push('s.is_active = true');
   }
 
+  if (req.query.featured === 'true') {
+    conditions.push('s.is_featured = true');
+  }
+
   if (search) {
     conditions.push(`(s.name ILIKE $${paramIndex} OR s.role ILIKE $${paramIndex} OR s.email ILIKE $${paramIndex} OR s.phone ILIKE $${paramIndex})`);
     values.push(`%${search}%`);
@@ -76,7 +80,7 @@ const getMyStaffProfile = catchAsync(async (req, res, next) => {
 });
 
 const createStaff = catchAsync(async (req, res) => {
-  const { name, role, avatar_url, phone, email, is_active, sort_order, service_ids, bio, specialties, experience_years, instagram_url, linkedin_url } = req.body;
+  const { name, role, avatar_url, phone, email, is_active, is_featured, sort_order, service_ids, bio, specialties, experience_years, instagram_url, linkedin_url } = req.body;
   const client = await db.getClient();
 
   try {
@@ -97,10 +101,10 @@ const createStaff = catchAsync(async (req, res) => {
     }
 
     const result = await client.query(
-      `INSERT INTO staff (user_id, name, role, avatar_url, phone, email, is_active, sort_order, bio, specialties, experience_years, instagram_url, linkedin_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO staff (user_id, name, role, avatar_url, phone, email, is_active, is_featured, sort_order, bio, specialties, experience_years, instagram_url, linkedin_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
-      [userId, name, role, avatar_url, phone, email, is_active, sort_order, bio, specialties || '{}', experience_years, instagram_url, linkedin_url]
+      [userId, name, role, avatar_url, phone, email, is_active, is_featured || false, sort_order, bio, specialties || '{}', experience_years, instagram_url, linkedin_url]
     );
 
     const staffMember = result.rows[0];
@@ -127,7 +131,7 @@ const createStaff = catchAsync(async (req, res) => {
 
 const updateStaff = catchAsync(async (req, res, next) => {
   const staffId = req.params.id;
-  const { name, role, avatar_url, phone, email, is_active, sort_order, service_ids, bio, specialties, experience_years, instagram_url, linkedin_url } = req.body;
+  const { name, role, avatar_url, phone, email, is_active, is_featured, sort_order, service_ids, bio, specialties, experience_years, instagram_url, linkedin_url } = req.body;
   
   const client = await db.getClient();
   try {
@@ -141,15 +145,16 @@ const updateStaff = catchAsync(async (req, res, next) => {
           phone = COALESCE($4, phone),
           email = COALESCE($5, email),
           is_active = COALESCE($6, is_active),
-          sort_order = COALESCE($7, sort_order),
-          bio = COALESCE($8, bio),
-          specialties = COALESCE($9, specialties),
-          experience_years = COALESCE($10, experience_years),
-          instagram_url = COALESCE($11, instagram_url),
-          linkedin_url = COALESCE($12, linkedin_url)
-        WHERE id = $13
+          is_featured = COALESCE($7, is_featured),
+          sort_order = COALESCE($8, sort_order),
+          bio = COALESCE($9, bio),
+          specialties = COALESCE($10, specialties),
+          experience_years = COALESCE($11, experience_years),
+          instagram_url = COALESCE($12, instagram_url),
+          linkedin_url = COALESCE($13, linkedin_url)
+        WHERE id = $14
         RETURNING *`,
-       [name, role, avatar_url, phone, email, is_active, sort_order, bio, specialties, experience_years, instagram_url, linkedin_url, staffId]
+       [name, role, avatar_url, phone, email, is_active, is_featured, sort_order, bio, specialties, experience_years, instagram_url, linkedin_url, staffId]
     );
 
     if (!result.rows[0]) {

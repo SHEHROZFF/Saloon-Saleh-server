@@ -22,7 +22,7 @@ router.patch('/staff/:id/status', protect, restrictTo('staff'), validate(booking
 router.get('/', protect, restrictTo('admin'), bookingController.getAllBookings);
 router.get('/:id', protect, restrictTo('admin', 'staff'), bookingController.getBooking);
 router.patch('/:id/status', protect, restrictTo('admin'), validate(bookingValidation.updateStatus), bookingController.updateBookingStatus);
-router.put('/:id', protect, restrictTo('admin'), bookingController.updateBookingDetails);
+router.put('/:id', protect, restrictTo('admin'), validate(bookingValidation.updateDetails), bookingController.updateBookingDetails);
 router.delete('/:id', protect, restrictTo('admin'), bookingController.deleteBooking);
 
 module.exports = router;

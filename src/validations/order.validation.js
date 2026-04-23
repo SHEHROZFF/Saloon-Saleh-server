@@ -44,4 +44,10 @@ const updateStatus = Joi.object({
   payment_status: Joi.string().valid('pending', 'paid', 'failed', 'refunded'),
 });
 
-module.exports = { create, updateStatus };
+const updateDetails = Joi.object({
+  order_notes: Joi.string().max(1000).allow('', null),
+  billing_address: addressSchema,
+  shipping_address: shippingAddressSchema.allow(null),
+}).min(1);
+
+module.exports = { create, updateStatus, updateDetails };
