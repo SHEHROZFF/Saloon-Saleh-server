@@ -5,8 +5,9 @@ const authUtils = require('../utils/auth');
 const emailService = require('../utils/email');
 
 const getAllStaff = catchAsync(async (req, res) => {
-  const result = await db.query(
-    `SELECT s.*,
+  const { search, all } = req.query;
+  
+  let query = `SELECT s.*,
        COALESCE(
          json_agg(json_build_object('id', svc.id, 'name', svc.name))
          FILTER (WHERE svc.id IS NOT NULL),
@@ -14,11 +15,25 @@ const getAllStaff = catchAsync(async (req, res) => {
        ) AS services
      FROM staff s
      LEFT JOIN staff_services ss ON s.id = ss.staff_id
-     LEFT JOIN services svc ON ss.service_id = svc.id
-     WHERE s.is_active = true AND s.is_deleted = false
-     GROUP BY s.id
-     ORDER BY s.sort_order ASC`
-  );
+     LEFT JOIN services svc ON ss.service_id = svc.id`;
+
+  const conditions = ['s.is_deleted = false'];
+  const values = [];
+  let paramIndex = 1;
+
+  if (all !== 'true') {
+    conditions.push('s.is_active = true');
+  }
+
+  if (search) {
+    conditions.push(`(s.name ILIKE $${paramIndex} OR s.role ILIKE $${paramIndex} OR s.email ILIKE $${paramIndex} OR s.phone ILIKE $${paramIndex})`);
+    values.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  query += ` WHERE ${conditions.join(' AND ')} GROUP BY s.id ORDER BY s.sort_order ASC`;
+
+  const result = await db.query(query, values);
 
   res.status(200).json({
     status: 'success',

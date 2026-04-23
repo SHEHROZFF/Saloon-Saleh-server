@@ -107,7 +107,7 @@ const createBooking = catchAsync(async (req, res) => {
 
 const getAllBookings = catchAsync(async (req, res) => {
   const { page, limit } = parsePagination(req.query);
-  const { status, date, staff_id } = req.query;
+  const { status, date, staff_id, search } = req.query;
   const offset = (page - 1) * limit;
 
   let query = `SELECT b.*, ts.display_label AS time_label, st.name AS staff_name
@@ -134,6 +134,11 @@ const getAllBookings = catchAsync(async (req, res) => {
   if (staff_id) {
     conditions.push(`b.staff_id = $${paramIndex}`);
     values.push(staff_id);
+    paramIndex++;
+  }
+  if (search) {
+    conditions.push(`(b.first_name ILIKE $${paramIndex} OR b.last_name ILIKE $${paramIndex} OR b.email ILIKE $${paramIndex} OR b.phone ILIKE $${paramIndex})`);
+    values.push(`%${search}%`);
     paramIndex++;
   }
 

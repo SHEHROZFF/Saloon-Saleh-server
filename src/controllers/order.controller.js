@@ -127,15 +127,19 @@ const createOrder = catchAsync(async (req, res) => {
 
 const getAllOrders = catchAsync(async (req, res) => {
   const { page, limit } = parsePagination(req.query);
-  const { order_status, payment_status } = req.query;
+  const { order_status, payment_status, search } = req.query;
   const offset = (page - 1) * limit;
 
   let query = `
-    SELECT o.*, ba.first_name, ba.last_name, ba.email as customer_email
+    SELECT o.*, ba.first_name, ba.last_name, ba.email as customer_email, ba.phone as customer_phone
     FROM orders o
     LEFT JOIN billing_addresses ba ON o.id = ba.order_id
   `;
-  let countQuery = 'SELECT COUNT(*) FROM orders o';
+  let countQuery = `
+    SELECT COUNT(*) 
+    FROM orders o
+    LEFT JOIN billing_addresses ba ON o.id = ba.order_id
+  `;
 
   const conditions = [];
   const values = [];
@@ -149,6 +153,11 @@ const getAllOrders = catchAsync(async (req, res) => {
   if (payment_status) {
     conditions.push(`o.payment_status = $${paramIndex}`);
     values.push(payment_status);
+    paramIndex++;
+  }
+  if (search) {
+    conditions.push(`(o.order_number ILIKE $${paramIndex} OR ba.first_name ILIKE $${paramIndex} OR ba.last_name ILIKE $${paramIndex} OR ba.email ILIKE $${paramIndex} OR ba.phone ILIKE $${paramIndex})`);
+    values.push(`%${search}%`);
     paramIndex++;
   }
 

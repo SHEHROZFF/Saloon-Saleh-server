@@ -52,8 +52,12 @@ const getAllProducts = catchAsync(async (req, res) => {
     ? { columns: ['p.title', 'p.brand'], term: search }
     : null;
 
-  // Always filter for active only on public-facing
-  filters['p.is_active'] = true;
+  // Default to showing only active products for public shop
+  // Allow explicit override from Admin dashboard
+  if (req.query.include_inactive !== 'true') {
+    filters['p.is_active'] = true;
+  }
+  
   filters['p.is_deleted'] = false;
 
   const baseQuery = `SELECT p.*, pc.name AS category_name

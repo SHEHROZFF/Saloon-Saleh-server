@@ -27,13 +27,29 @@ const createBlog = catchAsync(async (req, res, next) => {
 });
 
 const getAllBlogs = catchAsync(async (req, res) => {
-  const result = await db.query(
-    `SELECT b.*, s.name as staff_name, s.role as staff_role, s.avatar_url as staff_avatar
+  const { search, all } = req.query;
+
+  let query = `SELECT b.*, s.name as staff_name, s.role as staff_role, s.avatar_url as staff_avatar
      FROM staff_blogs b
-     JOIN staff s ON b.staff_id = s.id
-     WHERE b.status = 'published' AND s.is_deleted = false AND b.is_deleted = false
-     ORDER BY b.created_at DESC`
-  );
+     JOIN staff s ON b.staff_id = s.id`;
+
+  const conditions = ['b.is_deleted = false', 's.is_deleted = false'];
+  const values = [];
+  let paramIndex = 1;
+
+  if (all !== 'true') {
+    conditions.push("b.status = 'published'");
+  }
+
+  if (search) {
+    conditions.push(`(b.title ILIKE $${paramIndex} OR b.excerpt ILIKE $${paramIndex} OR s.name ILIKE $${paramIndex})`);
+    values.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  query += ` WHERE ${conditions.join(' AND ')} ORDER BY b.created_at DESC`;
+
+  const result = await db.query(query, values);
 
   res.status(200).json({
     status: 'success',
